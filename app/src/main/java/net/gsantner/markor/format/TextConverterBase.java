@@ -57,7 +57,7 @@ public abstract class TextConverterBase {
     protected static final String TOKEN_FILEURI_VIEWED_FILE = "{{ app.fileuri_viewed_file }}";
 
     protected static final String HTML_DOCTYPE = "<!DOCTYPE html>";
-    protected static final String HTML001_HEAD_WITH_BASESTYLE = "<html lang='" + TOKEN_POST_LANG + "'><head><meta charset='UTF-8'>" + CSS_S + "html,body{padding:4px 8px 4px 8px;font-family:'" + TOKEN_FONT + "';}h1,h2,h3,h4,h5,h6{font-family:'sans-serif-condensed';}a{color: " + TOKEN_LINK_COLOR + ";text-decoration:underline;}img{height:auto;max-width:100%;max-height: 90vh;margin:auto;}" + CSS_E;
+    protected static final String HTML001_HEAD_WITH_BASESTYLE = "<html lang='" + TOKEN_POST_LANG + "'><head><meta charset='UTF-8'>" + CSS_S + "html,body{padding:4px 8px 4px 8px;font-family:'" + TOKEN_FONT + "',sans-serif;}h1,h2,h3,h4,h5,h6{font-family:'" + TOKEN_FONT + "','sans-serif-condensed',sans-serif;}a{color: " + TOKEN_LINK_COLOR + ";text-decoration:underline;}img{height:auto;max-width:100%;max-height: 90vh;margin:auto;}" + CSS_E;
     protected static final String HTML002_HEAD_WITH_STYLE_LIGHT = CSS_S + "html,body{color:#303030;}blockquote{color:#73747d;}" + CSS_E;
     protected static final String HTML002_HEAD_WITH_STYLE_DARK = CSS_S + "html,body{color:#ffffff;background-color:#303030;}a:visited{color:#dddddd;}blockquote{color:#cccccc;}" + CSS_E;
     protected static final String HTML003_RIGHT_TO_LEFT = CSS_S + "body{text-align:" + TOKEN_TEXT_DIRECTION + ";direction:rtl;}" + CSS_E;
@@ -71,17 +71,10 @@ public abstract class TextConverterBase {
 
     // onPageLoaded_markor_private() invokes the user injected function onPageLoaded()
     protected static final String HTML500_BODY = "</head>\n<body class='" + TOKEN_TEXT_CONVERTER_CSS_CLASS + "' onload='onPageLoaded_markor_private();'>\n\n<!-- USER DOCUMENT CONTENT -->\n\n\n";
-    /**
-     * protected static final String HTML900_TO_TOP = "<a class='back_to_top'>&uarr;</a>"
-     * + CSS_S + ".back_to_top { position: fixed; bottom: 80px; right: 40px; z-index: 9999; width: 30px; height: 30px; text-align: center; line-height: 30px; background: #f5f5f5; color: #444; cursor: pointer; border-radius: 2px; display: none; } .back_to_top:hover { background: #e9ebec; } .back_to_top-show { display: block; }" +CSS_E
-     * + "<script>" + "(function() { 'use strict'; function trackScroll() { var scrolled = window.pageYOffset; var coords = document.documentElement.clientHeight; if (scrolled > coords) { goTopBtn.classList.add('back_to_top-show'); } if (scrolled < coords) { goTopBtn.classList.remove('back_to_top-show'); } } function backToTop() { if (window.pageYOffset > 0) { window.scrollBy(0, -80); setTimeout(backToTop, 0); } } var goTopBtn = document.querySelector('.back_to_top'); window.addEventListener('scroll', trackScroll); goTopBtn.addEventListener('click', backToTop); })();" + "</script>";
-     */
     protected static final String HTML990_BODY_END = "\n\n<!-- USER DOCUMENT CONTENT END -->\n\n</body></html>";
 
     protected static final String HTML_ON_PAGE_LOAD_S = "<script> function onPageLoaded_markor_private() {\n";
     protected static final String HTML_ON_PAGE_LOAD_E = "\nonPageLoaded(); }\n</script>";
-
-    // protected static final String HTML_JQUERY_INCLUDE = "<script src='file:///android_asset/jquery/jquery-3.3.1.min.js'></script>"; // currently not bundled
 
     //########################
     //## Methods
@@ -153,9 +146,12 @@ public abstract class TextConverterBase {
 
         html += head + as.getInjectedHeader();
 
-        html += HTML_ON_PAGE_LOAD_S + onLoadJs + HTML_ON_PAGE_LOAD_E;
+        html += HTML_ON_PAGE_LOAD_S
+                + "try { document.fonts.load('1em customfont'); } catch(e) {}\n"
+                + onLoadJs
+                + HTML_ON_PAGE_LOAD_E;
 
-                // Add custom font css if font is a filepath, swap path with new font-family
+        // Add custom font css if font is a filepath, swap path with new font-family
         String font = as.getFontFamily();
         if (font.startsWith("/")) {
             try {
@@ -172,12 +168,22 @@ public abstract class TextConverterBase {
                     }
                 }
                 final String b64 = android.util.Base64.encodeToString(data, android.util.Base64.NO_WRAP);
-                html += CSS_S + "@font-face { font-family: customfont; src: url('data:font/ttf;base64," + b64 + "'); }" + CSS_E;
+
+                final String lower = font.toLowerCase();
+                final String mime = lower.endsWith(".otf") ? "font/otf"
+                        : lower.endsWith(".woff2") ? "font/woff2"
+                        : lower.endsWith(".woff") ? "font/woff"
+                        : "font/ttf";
+
+                html += CSS_S + "@font-face { font-family: customfont; src: url('data:" + mime + ";base64," + b64 + "'); font-display: block; }" + CSS_E;
+                android.util.Log.d("FONT", "embedded font=" + font + " b64len=" + b64.length());
             } catch (Exception e) {
+                android.util.Log.e("FONT", "font embed failed: " + e);
                 html += CSS_S + "@font-face { font-family: customfont; src: url('file://" + font + "'); }" + CSS_E;
             }
             font = "customfont";
         }
+
         // Remove duplicate style blocks
         html = html.replace(CSS_E + CSS_S, "").replace(CSS_E + "\n" + CSS_S, "");
 
@@ -221,4 +227,4 @@ public abstract class TextConverterBase {
     }
 
     protected abstract boolean isFileOutOfThisFormat(final File file, final String name, final String ext);
-}
+            }
