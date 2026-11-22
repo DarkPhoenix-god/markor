@@ -155,13 +155,29 @@ public abstract class TextConverterBase {
 
         html += HTML_ON_PAGE_LOAD_S + onLoadJs + HTML_ON_PAGE_LOAD_E;
 
-        // Add custom font css if font is a filepath, swap path with new font-family
+                // Add custom font css if font is a filepath, swap path with new font-family
         String font = as.getFontFamily();
         if (font.startsWith("/")) {
-            html += CSS_S + "@font-face { font-family: customfont; src: url('file://" + font + "'); }" + CSS_E;
+            try {
+                final File fontFile = new File(font);
+                final byte[] data = new byte[(int) fontFile.length()];
+                try (java.io.FileInputStream in = new java.io.FileInputStream(fontFile)) {
+                    int off = 0;
+                    while (off < data.length) {
+                        final int n = in.read(data, off, data.length - off);
+                        if (n < 0) {
+                            break;
+                        }
+                        off += n;
+                    }
+                }
+                final String b64 = android.util.Base64.encodeToString(data, android.util.Base64.NO_WRAP);
+                html += CSS_S + "@font-face { font-family: customfont; src: url('data:font/ttf;base64," + b64 + "'); }" + CSS_E;
+            } catch (Exception e) {
+                html += CSS_S + "@font-face { font-family: customfont; src: url('file://" + font + "'); }" + CSS_E;
+            }
             font = "customfont";
         }
-
         // Remove duplicate style blocks
         html = html.replace(CSS_E + CSS_S, "").replace(CSS_E + "\n" + CSS_S, "");
 
